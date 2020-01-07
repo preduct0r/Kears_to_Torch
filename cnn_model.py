@@ -18,7 +18,7 @@ from keras.engine.topology import get_source_inputs
 
 import tensorflow.keras.backend as K
 
-
+хуй во рту моржа
 # class Config:
 #     def __init__(self, shape, lr, n_classes, num_epochs=500):
 #         self.shape = shape
