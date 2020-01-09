@@ -1,8 +1,15 @@
 import torch
 from torch.nn import Sequential
 from torch.nn import functional as F
+from torch import nn
 
 
+class Config:
+    def __init__(self, shape, lr, n_classes, num_epochs=500):
+        self.shape = shape
+        self.lr = lr
+        self.num_epochs = num_epochs
+        self.n_classes = n_classes
 
 def get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=True):
     dr = 0.1

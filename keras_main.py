@@ -1,5 +1,6 @@
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import os
 import pickle
 
@@ -22,7 +23,7 @@ import sys
 
 if __name__ == "__main__":
 
-    base_path = r'C:\Users\kotov-d\Documents\bases\iemocap'
+    base_path = r'C:\Users\kotov-d\Documents\BASES\IEMOCAP\iemocap'
     train_meta_path = os.path.join(base_path, 'meta_train.csv')
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
