@@ -18,38 +18,21 @@ from trainutils import f1
 from batcher import DummyBatcher
 from prepare_datasets import get_data, rectify_data
 import sys
+import tensorflow as tf
 
 
 
 if __name__ == "__main__":
-
+# загрузка посчитанных данных
     base_path = r'C:\Users\kotov-d\Documents\BASES\IEMOCAP\iemocap'
     train_meta_path = os.path.join(base_path, 'meta_train.csv')
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
-
-    batch_size = 64
-    cur_feature_dimension = 1
-    feat_t = False
-    show_train_info = 1
-
-    from tensorflow.python.client import device_lib
-
-
-    def get_available_gpus():
-        local_device_protos = device_lib.list_local_devices()
-        return [x.name for x in local_device_protos if x.device_type == 'GPU']
-
-
-    print(get_available_gpus())
-
-    config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
-    model = get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=True)
-
-
+    # подсчитать test и train выборки
     # test = rectify_data(base_path, test_meta_path)
     # train = rectify_data(base_path, train_meta_path)
 
+    # загрузить уже подсчитанные test и train выборки
     hf_train= h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'r')
     train = hf_train.get('x_train').value
     hf_train.close()
@@ -57,6 +40,22 @@ if __name__ == "__main__":
     hf_test = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'r')
     test = hf_test.get('x_test').value
     hf_test.close()
+
+
+    batch_size = 64
+    cur_feature_dimension = 1
+    feat_t = False
+    show_train_info = 1
+
+
+    # = stackoverflow snippet for launching GPU ==================
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(gpus[0], True)
+    # ============================================================
+
+
+    config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
+    model = get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=True)
 
 
     (N,W) = train.shape
@@ -85,20 +84,10 @@ if __name__ == "__main__":
     # start prediction
     batcher_test = DummyBatcher(config, batch_size, x_test)
 
-    model.load_weights(model_file)
-
     preds = model.predict_generator(batcher_test)
-    tmp = []
-    pred_num = []
-    for i in range(0, len(preds), n_preds_on_sample):
-        tmp.append(preds[i: i + n_preds_on_sample, :].mean(axis=0))
-        pred_num.append(np.argmax(tmp[-1], axis=0))
-    final_probas.append(np.copy(np.asarray(tmp)))
-    pred_label = [event_names[i] for i in pred_num]
 
     print('***************')
-    print(model_file)
-    print('Unweighted accuracy:', accuracy_score(y_test_lab, pred_label))
-    print('Weighted accuracy  :', recall_score(y_test_lab, pred_label, average='macro'))
-    print('f1-score           :', f1_score(y_test_lab, pred_label, average='macro'))
-    print('Confusion matrix:\n', confusion_matrix(y_test_lab, pred_label))
+    print('Unweighted accuracy:', accuracy_score(y_test, preds))
+    print('Weighted accuracy  :', recall_score(y_test, preds, average='macro'))
+    print('f1-score           :', f1_score(y_test, preds, average='macro'))
+    print('Confusion matrix:\n', confusion_matrix(y_test, preds))

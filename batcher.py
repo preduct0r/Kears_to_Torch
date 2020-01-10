@@ -31,7 +31,9 @@ class DummyBatcher(Sequence):
             indexes_tmp = np.arange(len(self.x))[index * self.batch_size:(index + 1) * self.batch_size]
             res_x = []
             for i in indexes_tmp:
-                for j in range(self.repeat_test):
-                    res_x.append(self.prepare_feature(self.x[i]))
-            res_x = np.asarray(res_x)
+                res_x.append(self.x[i])
+                # код для тестовой выборки ссылается на не существующие функции
+                # for j in range(self.repeat_test):
+                #     res_x.append(self.prepare_feature(self.x[i]))
+            res_x = np.asarray(res_x)[:, :, np.newaxis]
             return res_x

@@ -7,6 +7,91 @@ import ntpath
 import h5py
 
 
+def rectify_data(base_dir, meta_path):
+    meta_data = pd.read_csv(meta_path, delimiter=';')
+
+    rect_x, rect_y, ground_truth_sr = [], [], 8000
+
+    # проходимся по каждому файлу и нарезаем его на куски по 16000 отчетов
+    for idx ,row in meta_data.loc[:,['cur_name','cur_label']].iterrows():
+        x, sr = librosa.core.load(os.path.join(base_dir, 'data', row[0]), sr=None, mono=False, res_type='kaiser_best', dtype=np.float32)
+
+        # проверка на соответствие sample_rate правильному значению
+        if sr != ground_truth_sr:
+            print('What the hell is going on with sample rate of your files?')
+            raise Exception()
+
+        # чтобы быстрее считалось снизим память выделяемую под каждое число
+        x.astype(np.float16)
+
+        x = [k for k in x]
+        y = row[1]
+
+        # добавляем куски по 16000 с нахлестом 8000                         что тут за дерьмо происходит, Денис?
+        for k in range(0, len(x)-16000, 8000):
+            rect_x.append(tuple(x[k:k+16000]))
+            rect_y.append(y)
+        for element in rect_x[::-1]:
+            if len(element) < 16000:
+                element = np.pad(element, (0, 16000 - len(element)), mode='constant')
+                rect_x.append(tuple(element))
+                rect_y.append(y)
+            else:
+                break
+
+        if idx%50==0 and idx!=0:
+            print(idx)
+
+    # вспомогательная функция, чтобы привести лист листов к матричному виду
+    def make_array(x):
+        new_x = [np.array(c) for c in x]
+
+        array_x = np.vstack(new_x)
+        return array_x
+
+    final_x = make_array(rect_x)
+
+
+    # переводим категориальные призаки к вещественным, чтобы было возможно производить расчеты,
+    # а для обратного обращения создаем словарь
+    dict_emo, reverse_dict_emo, mark = {}, {}, True
+    if mark==True:
+        for idx,i in enumerate(np.unique(rect_y)):
+            dict_emo[i] = idx
+            reverse_dict_emo[idx] = i
+            mark=False
+        with open(r'C:\Users\kotov-d\Documents\ulma\dictionaries.pkl', 'wb') as f:
+            pickle.dump([dict_emo, reverse_dict_emo], f, protocol=2)
+    else:
+        with open(r'C:\Users\kotov-d\Documents\ulma\dictionaries.pkl', 'rb') as f:
+            [dict_emo, reverse_dict_emo] = pickle.load(f)
+
+    rect_y = [dict_emo[i] for i in rect_y]
+    rect_y = np.array(rect_y).reshape(-1,1)
+
+    rect_data = np.hstack((final_x, rect_y))
+
+
+
+    # сохраняем эти матрицы
+    if ntpath.basename(str(meta_path))=='meta_train.csv':
+        h5f = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'w')
+        h5f.create_dataset('x_train', data=rect_data)
+        h5f.close()
+    else:
+        h5f = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'w')
+        h5f.create_dataset('x_test', data=rect_data, dtype=np.float16)
+        h5f.close()
+
+
+
+
+
+
+
+
+
+
 
 def get_data():
     base_dir = r'C:\Users\kotov-d\Documents\bases'
@@ -113,77 +198,4 @@ def get_data():
 
     return [[iemocap_x_train, iemocap_x_test, omg_x_train, omg_x_test, mosei_x_train, mosei_x_test],
         [iemocap_y_train, iemocap_y_test, omg_y_train, omg_y_test, mosei_y_train, mosei_y_test]]
-
-def rectify_data(base_dir, meta_path):
-    meta_data = pd.read_csv(meta_path, delimiter=';')
-    # meta_data = meta_data.iloc[:20]
-    # print(meta_data.shape[0])
-
-    rect_x, rect_y, ground_truth_sr = [], [], 8000
-    for idx ,row in meta_data.loc[:,['cur_name','cur_label']].iterrows():
-        x, sr = librosa.core.load(os.path.join(base_dir, 'data', row[0]), sr=None, mono=False, res_type='kaiser_best', dtype=np.float32)
-        # if sr != ground_truth_sr:
-        #     print('What the hell is going on with sample rate of your files?')
-        #     raise Exception()
-        x.astype(np.float16)
-        x = [k for k in x]
-        y = row[1]
-
-        for k in range(0, len(x)-16000, 8000):
-            rect_x.append(tuple(x[k:k+16000]))
-            rect_y.append(y)
-        for element in rect_x[::-1]:
-            if len(element) < 16000:
-                element = np.pad(element, (0, 16000 - len(element)), mode='constant')
-                rect_x.append(tuple(element))
-                rect_y.append(y)
-            else:
-                break
-
-        if idx%50==0 and idx!=0:
-            print(idx)
-
-    def make_array(x):
-        new_x = [np.array(c) for c in x]
-
-        array_x = np.vstack(new_x)
-        return array_x
-
-    # final_x = np.empty(shape=(len(rect_x), len(rect_x[0])))
-    # for idx, i in enumerate(rect_x):
-    #     final_x[idx] = i
-
-    final_x = make_array(rect_x)
-
-    dict_emo, reverse_dict_emo, mark = {}, {}, True
-    if mark==True:
-        for idx,i in enumerate(np.unique(rect_y)):
-            dict_emo[i] = idx
-            reverse_dict_emo[idx] = i
-            mark=False
-        with open(r'C:\Users\kotov-d\Documents\ulma\dictionaries.pkl', 'wb') as f:
-            pickle.dump([dict_emo, reverse_dict_emo], f, protocol=2)
-    else:
-        with open(r'C:\Users\kotov-d\Documents\ulma\dictionaries.pkl', 'rb') as f:
-            [dict_emo, reverse_dict_emo] = pickle.load(f)
-
-    rect_y = [dict_emo[i] for i in rect_y]
-    rect_y = np.array(rect_y).reshape(-1,1)
-
-    rect_data = np.hstack((final_x, rect_y))
-    print(rect_data.shape, np.unique(rect_data[:,-1]))
-
-
-
-
-    if ntpath.basename(str(meta_path))=='meta_train.csv':
-        h5f = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'w')
-        h5f.create_dataset('x_train', data=rect_data)
-        h5f.close()
-    else:
-        h5f = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'w')
-        h5f.create_dataset('x_test', data=rect_data, dtype=np.float16)
-        h5f.close()
-
-
 
