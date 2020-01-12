@@ -24,22 +24,22 @@ import tensorflow as tf
 
 if __name__ == "__main__":
 # загрузка посчитанных данных
-    base_path = r'C:\Users\kotov-d\Documents\BASES\IEMOCAP\iemocap'
+    base_path = r'C:\Users\preductor\Documents\dummy_files'
     train_meta_path = os.path.join(base_path, 'meta_train.csv')
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
     # подсчитать test и train выборки
-    # test = rectify_data(base_path, test_meta_path)
-    # train = rectify_data(base_path, train_meta_path)
+    test = rectify_data(base_path, test_meta_path)
+    train = rectify_data(base_path, train_meta_path)
 
     # загрузить уже подсчитанные test и train выборки
-    hf_train= h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'r')
-    train = hf_train.get('x_train').value
-    hf_train.close()
-
-    hf_test = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'r')
-    test = hf_test.get('x_test').value
-    hf_test.close()
+    # hf_train= h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'r')
+    # train = hf_train.get('x_train').value
+    # hf_train.close()
+    #
+    # hf_test = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'r')
+    # test = hf_test.get('x_test').value
+    # hf_test.close()
 
 
     batch_size = 64
@@ -49,13 +49,13 @@ if __name__ == "__main__":
 
 
     # = stackoverflow snippet for launching GPU ==================
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(gpus[0], True)
+    # gpus = tf.config.experimental.list_physical_devices('GPU')
+    # tf.config.experimental.set_memory_growth(gpus[0], True)
     # ============================================================
 
 
     config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
-    model = get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=True)
+    model = get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=False)
 
 
     (N,W) = train.shape

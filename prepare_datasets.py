@@ -10,7 +10,7 @@ import h5py
 def rectify_data(base_dir, meta_path):
     meta_data = pd.read_csv(meta_path, delimiter=';')
 
-    rect_x, rect_y, ground_truth_sr = [], [], 8000
+    rect_x, rect_y, ground_truth_sr = [], [], 16000
 
     # проходимся по каждому файлу и нарезаем его на куски по 16000 отчетов
     for idx ,row in meta_data.loc[:,['cur_name','cur_label']].iterrows():
@@ -28,16 +28,16 @@ def rectify_data(base_dir, meta_path):
         y = row[1]
 
         # добавляем куски по 16000 с нахлестом 8000                         что тут за дерьмо происходит, Денис?
+        k1=0
         for k in range(0, len(x)-16000, 8000):
             rect_x.append(tuple(x[k:k+16000]))
             rect_y.append(y)
-        for element in rect_x[::-1]:
-            if len(element) < 16000:
-                element = np.pad(element, (0, 16000 - len(element)), mode='constant')
-                rect_x.append(tuple(element))
-                rect_y.append(y)
-            else:
-                break
+            k1=k
+        for k2 in range(k1+8000, len(x), 8000):
+            element = x[k2:]
+            element = np.pad(element, (0, 16000 - len(element)), mode='constant')
+            rect_x.append(tuple(element))
+            rect_y.append(y)
 
         if idx%50==0 and idx!=0:
             print(idx)
@@ -60,10 +60,10 @@ def rectify_data(base_dir, meta_path):
             dict_emo[i] = idx
             reverse_dict_emo[idx] = i
             mark=False
-        with open(r'C:\Users\kotov-d\Documents\ulma\dictionaries.pkl', 'wb') as f:
+        with open(r'C:\Users\preductor\Documents\dummy_files\dictionaries.pkl', 'wb') as f:
             pickle.dump([dict_emo, reverse_dict_emo], f, protocol=2)
     else:
-        with open(r'C:\Users\kotov-d\Documents\ulma\dictionaries.pkl', 'rb') as f:
+        with open(r'C:\Users\preductor\Documents\dummy_files\dictionaries.pkl', 'rb') as f:
             [dict_emo, reverse_dict_emo] = pickle.load(f)
 
     rect_y = [dict_emo[i] for i in rect_y]
@@ -75,11 +75,11 @@ def rectify_data(base_dir, meta_path):
 
     # сохраняем эти матрицы
     if ntpath.basename(str(meta_path))=='meta_train.csv':
-        h5f = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'w')
+        h5f = h5py.File(r'C:\Users\preductor\Documents\dummy_files\x_train.h5', 'w')
         h5f.create_dataset('x_train', data=rect_data)
         h5f.close()
     else:
-        h5f = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'w')
+        h5f = h5py.File(r'C:\Users\preductor\Documents\dummy_files\x_test.h5', 'w')
         h5f.create_dataset('x_test', data=rect_data, dtype=np.float16)
         h5f.close()
 
