@@ -3,20 +3,15 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import os
 import pickle
+import h5py
 
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler)
-from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
-import h5py
 
 from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d, get_seresnet18_model
-from batcher import DummyBatcher
-from prepare_datasets import get_data, rectify_data
-import sys
-import tensorflow as tf
-
-
+from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
 
 if __name__ == "__main__":
 # загрузка посчитанных данных
@@ -66,30 +61,3 @@ if __name__ == "__main__":
     y_test = test[:, -1]
 
     print('=================================================================\n=================================================================')
-
-
-
-
-    # batcher_train = DummyBatcher(config, batch_size, x_train, y_train)
-    # batcher_val = DummyBatcher(config, batch_size, x_val, y_val)
-    #
-    # my_callback = EarlyStopping(patience=5)
-    # history = model.fit_generator(batcher_train, validation_data=batcher_val, epochs=config.num_epochs,
-    #                               use_multiprocessing=False, verbose=show_train_info, callbacks=[my_callback])
-    #
-    # with open (r"C:\Users\kotov-d\Documents\TASKS\task#7\model.pkl","wb") as f:
-    #     pickle.dump(model, f)
-
-    # start prediction
-    with open (r"C:\Users\kotov-d\Documents\TASKS\task#7\model.pkl","rb") as f:
-        model = pickle.load(f)
-
-    batcher_test = DummyBatcher(config, batch_size, x_test)
-
-    preds = model.predict_generator(batcher_test)
-
-    print('***************')
-    print('Unweighted accuracy:', accuracy_score(y_test, preds))
-    print('Weighted accuracy  :', recall_score(y_test, preds, average='macro'))
-    print('f1-score           :', f1_score(y_test, preds, average='macro'))
-    print('Confusion matrix:\n', confusion_matrix(y_test, preds))
