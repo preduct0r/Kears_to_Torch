@@ -1,23 +1,18 @@
 import warnings
+
+from opt_einsum.backends import torch
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import os
-import pickle
-
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
 from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler)
 from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
-from keras.utils import Sequence, to_categorical
-from librosa.core import load
 import h5py
 
 from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d, get_seresnet18_model
-from trainutils import f1
 from batcher import DummyBatcher
-from prepare_datasets import get_data, rectify_data
-import sys
+from prepare_datasets import rectify_data
 import tensorflow as tf
 
 
@@ -32,14 +27,6 @@ if __name__ == "__main__":
     test = rectify_data(base_path, test_meta_path)
     train = rectify_data(base_path, train_meta_path)
 
-    # загрузить уже подсчитанные test и train выборки
-    # hf_train= h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'r')
-    # train = hf_train.get('x_train').value
-    # hf_train.close()
-    #
-    # hf_test = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'r')
-    # test = hf_test.get('x_test').value
-    # hf_test.close()
 
 
     batch_size = 64
@@ -47,11 +34,6 @@ if __name__ == "__main__":
     feat_t = False
     show_train_info = 1
 
-
-    # = stackoverflow snippet for launching GPU ==================
-    # gpus = tf.config.experimental.list_physical_devices('GPU')
-    # tf.config.experimental.set_memory_growth(gpus[0], True)
-    # ============================================================
 
 
     config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
