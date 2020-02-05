@@ -25,8 +25,8 @@ if __name__ == "__main__":
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
     # # подсчитать test и train выборки
-    # test = rectify_data(base_path, test_meta_path)
-    # train = rectify_data(base_path, train_meta_path)
+    test = rectify_data(base_path, test_meta_path)
+    train = rectify_data(base_path, train_meta_path)
 
     # загрузить уже подсчитанные test и train выборки
     hf_train= h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'r')

@@ -1,5 +1,4 @@
 import tensorflow
 import keras
 
-print(keras.__version__)
-print(tensorflow.__version__)
+rectify_data(base_dir, meta_path)

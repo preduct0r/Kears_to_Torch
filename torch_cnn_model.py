@@ -14,7 +14,7 @@ class Config:
 
 
 class torch_model(nn.Module):
-    def __init__(self, config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=True):
+    def __init__(self, config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8)):
         super(torch_model, self).__init__()
         self.config = config
         self.fc1 = nn.Conv1d(in_channels= config.shape[1], out_channels=8, kernel_size=k_size[0], stride=1)
@@ -35,10 +35,10 @@ class torch_model(nn.Module):
         self.fc4 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=k_size[3], stride=1)
         self.bn_4 = nn.BatchNorm1d(64)
         self.relu4 = nn.ReLU()
-        self.mp4 = nn.MaxPool1d(kernel_size=p_size[3])
+        self.mp4 = nn.MaxPool1d(kernel_size=p_size[3])                 # some_output_shape
 
-        self.lstm = nn.LSTM(input_size=64, hidden_size=64, num_layers=2)
-        self.linear = nn.Linear(64, )
+        self.lstm = nn.LSTM(input_size=12345, hidden_size=128, num_layers=2)
+        self.linear = nn.Linear(12345, self.config.n_classes)
 
 
     def forward(self, x):
@@ -63,7 +63,8 @@ class torch_model(nn.Module):
         out = self.mp4(out)
 
         out = self.lstm(out)
-        out = F.adaptive_max_pool1d(out.numpy().unsqueeze(0), output_size=1)
+        out = F.adaptive_max_pool1d(out.unsqueeze(0), output_size=1)
         out = F.dropout(out, p=self.config.dr)
-        out = nn.Linear()
+        out = self.linear(out)
+
         return out
