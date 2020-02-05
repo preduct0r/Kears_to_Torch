@@ -37,7 +37,7 @@ class torch_model(nn.Module):
         self.relu4 = nn.ReLU()
         self.mp4 = nn.MaxPool1d(kernel_size=p_size[3])                 # some_output_shape
 
-        self.lstm = nn.LSTM(input_size=12345, hidden_size=128, num_layers=2)
+        self.lstm = nn.LSTM(input_size=191, hidden_size=128, num_layers=2)
         self.linear = nn.Linear(12345, self.config.n_classes)
 
 
@@ -47,17 +47,17 @@ class torch_model(nn.Module):
         out = self.relu1(out)
         out = self.mp1(out)
 
-        out = self.fc2(x)
+        out = self.fc2(out)
         out = self.bn_2(out)
         out = self.relu2(out)
         out = self.mp2(out)
 
-        out = self.fc3(x)
+        out = self.fc3(out)
         out = self.bn_3(out)
         out = self.relu3(out)
         out = self.mp3(out)
 
-        out = self.fc4(x)
+        out = self.fc4(out)
         out = self.bn_4(out)
         out = self.relu4(out)
         out = self.mp4(out)

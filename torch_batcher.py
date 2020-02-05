@@ -15,6 +15,6 @@ class My_Dataset(Dataset):
         return len(self.y)
 
     def __getitem__(self, idx):
-        return self.x[idx, np.newaxis, :].astype(np.float), self.y[idx]
+        return torch.cuda.FloatTensor(self.x[idx, np.newaxis, :], ), self.y[idx]
 
 
