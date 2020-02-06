@@ -7,16 +7,17 @@ import h5py
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d, get_seresnet18_model
 from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
 import torch
+from torchsummary import summary
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import torch.cuda as cuda
 
-from torch_cnn_model import torch_model
 from torch_batcher import My_Dataset
 from prepare_datasets import rectify_data
+from torch_cnn_model import  Config, torch_model
+
 
 
 if __name__ == "__main__":
@@ -50,6 +51,8 @@ if __name__ == "__main__":
 
     config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
     net = torch_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8))
+    # print(summary(net, torch.cuda.FloatTensor(1,16000)))
+    # input()
 
 
     (N,W) = train.shape
@@ -108,19 +111,21 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()  # Clear off the gradients from any past operation
             outputs = net(items)  # Do the forward pass
-            loss = criterion(outputs, classes)  # Calculate the loss
-            iter_loss += loss.data[0]  # Accumulate the loss
+            loss = criterion(outputs, classes.long()).sum() # Calculate the loss
+            iter_loss += loss.item()  # Accumulate the loss
             loss.backward()  # Calculate the gradients with help of back propagation
             optimizer.step()  # Ask the optimizer to adjust the parameters based on the gradients
 
             # Record the correct predictions for training data
             _, predicted = torch.max(outputs.data, 1)
-            correct += (predicted == classes.data).sum()
+            correct += (predicted == classes.data.long()).sum()
             iterations += 1
 
             # Record the training loss
             train_loss.append(iter_loss / iterations)
             # Record the training accuracy
+            # print(correct.cpu().numpy())
+            # print(len(batcher_train.dataset))
             train_accuracy.append((100 * correct / len(batcher_train.dataset)))
 
             ############################
@@ -145,11 +150,11 @@ if __name__ == "__main__":
                 classes = classes.cuda()
 
             outputs = net(items)  # Do the forward pass
-            loss += criterion(outputs, classes).data[0]  # Calculate the loss
+            loss += criterion(outputs, classes.long()).item()  # Calculate the loss
 
             # Record the correct predictions for training data
             _, predicted = torch.max(outputs.data, 1)
-            correct += (predicted == classes.data).sum()
+            correct += (predicted == classes.data.long()).sum()
 
             iterations += 1
 

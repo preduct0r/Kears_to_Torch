@@ -25,15 +25,15 @@ if __name__ == "__main__":
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
     # # подсчитать test и train выборки
-    test = rectify_data(base_path, test_meta_path)
-    train = rectify_data(base_path, train_meta_path)
+    # test = rectify_data(base_path, test_meta_path)
+    # train = rectify_data(base_path, train_meta_path)
 
     # загрузить уже подсчитанные test и train выборки
-    hf_train= h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_train.h5', 'r')
+    hf_train= h5py.File(r'C:\Users\kotov-d\Documents\TASKS\ulma\x_train.h5', 'r')
     train = hf_train.get('x_train').value
     hf_train.close()
 
-    hf_test = h5py.File(r'C:\Users\kotov-d\Documents\ulma\x_test.h5', 'r')
+    hf_test = h5py.File(r'C:\Users\kotov-d\Documents\TASKS\ulma\x_test.h5', 'r')
     test = hf_test.get('x_test').value
     hf_test.close()
 
@@ -52,7 +52,8 @@ if __name__ == "__main__":
 
     config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
     model = get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm=True)
-
+    print(model.summary())
+    input()
 
     (N,W) = train.shape
 
@@ -70,15 +71,15 @@ if __name__ == "__main__":
 
 
 
-    # batcher_train = DummyBatcher(config, batch_size, x_train, y_train)
-    # batcher_val = DummyBatcher(config, batch_size, x_val, y_val)
-    #
-    # my_callback = EarlyStopping(patience=5)
-    # history = model.fit_generator(batcher_train, validation_data=batcher_val, epochs=config.num_epochs,
-    #                               use_multiprocessing=False, verbose=show_train_info, callbacks=[my_callback])
-    #
-    # with open (r"C:\Users\kotov-d\Documents\TASKS\task#7\model.pkl","wb") as f:
-    #     pickle.dump(model, f)
+    batcher_train = DummyBatcher(config, batch_size, x_train, y_train)
+    batcher_val = DummyBatcher(config, batch_size, x_val, y_val)
+
+    my_callback = EarlyStopping(patience=5)
+    history = model.fit_generator(batcher_train, validation_data=batcher_val, epochs=config.num_epochs,
+                                  use_multiprocessing=False, verbose=show_train_info, callbacks=[my_callback])
+
+    with open (r"C:\Users\kotov-d\Documents\TASKS\task#7\model.pkl","wb") as f:
+        pickle.dump(model, f)
 
     # start prediction
     with open (r"C:\Users\kotov-d\Documents\TASKS\task#7\model.pkl","rb") as f:
