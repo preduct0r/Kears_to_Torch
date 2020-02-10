@@ -10,6 +10,8 @@ import h5py
 
 def rectify_data(base_dir, meta_path):
     meta_data = pd.read_csv(meta_path, delimiter=';')
+    meta_data = meta_data[meta_data.cur_label!='dis'][meta_data.cur_label!='exc'][meta_data.cur_label!='fea'][meta_data.cur_label!='fru'] \
+                                            [meta_data.cur_label != 'hap'][meta_data.cur_label != 'oth'][meta_data.cur_label != 'sur'][meta_data.cur_label != 'xxx']
 
     rect_x, rect_y, ground_truth_sr = [], [], 16000
 

@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
 
 
-    config = Config(shape=(16000, 1), lr=0.001, num_epochs=20, n_classes=10)
+    config = Config(shape=(16000, 1), lr=0.001, num_epochs=100, n_classes=3)
     net = torch_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8))
     # print(summary(net, torch.cuda.FloatTensor(1,16000)))
     # input()
@@ -65,8 +65,10 @@ if __name__ == "__main__":
     y_val = train[int(0.8*N):, -1]
     x_test = test[:, :16000]
     y_test = test[:, -1]
+    print('np.unique(y_train) ', np.unique(y_train, return_counts=True))
+    print('np.unique(y_test) ', np.unique(y_test, return_counts=True))
 
-    print('=================================================================\n=================================================================')
+    print('================================================\n\nStart learning')
 
     batcher_train = DataLoader(My_Dataset(x_train, y_train), batch_size=batch_size, shuffle=True)
     batcher_val = DataLoader(My_Dataset(x_val, y_val), batch_size=batch_size, shuffle=True)
@@ -78,6 +80,8 @@ if __name__ == "__main__":
     valid_loss = []
     train_accuracy = []
     valid_accuracy = []
+    train_fscore = []
+    valid_fscore = []
 
     if cuda.is_available():
         net = net.cuda()
@@ -95,6 +99,7 @@ if __name__ == "__main__":
         iter_loss = 0.0
         correct = 0
         iterations = 0
+        f_scores= 0
 
         net.train()  # Put the network into training mode
 
@@ -111,7 +116,7 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()  # Clear off the gradients from any past operation
             outputs = net(items)  # Do the forward pass
-            loss = criterion(outputs, classes.long()).sum() # Calculate the loss
+            loss = criterion(outputs, classes.long())                                               # Calculate the loss
             iter_loss += loss.item()  # Accumulate the loss
             loss.backward()  # Calculate the gradients with help of back propagation
             optimizer.step()  # Ask the optimizer to adjust the parameters based on the gradients
@@ -119,22 +124,27 @@ if __name__ == "__main__":
             # Record the correct predictions for training data
             _, predicted = torch.max(outputs.data, 1)
             correct += (predicted == classes.data.long()).sum()
+
+            f_scores += f1_score(predicted.cpu().numpy(), classes.data.cpu().numpy(), average='macro')
+
             iterations += 1
 
-            # Record the training loss
-            train_loss.append(iter_loss / iterations)
-            # Record the training accuracy
-            # print(correct.cpu().numpy())
-            # print(len(batcher_train.dataset))
-            train_accuracy.append((100 * correct / len(batcher_train.dataset)))
+        # Record the training loss
+        train_loss.append(iter_loss / iterations)
+        # Record the training accuracy
+        train_accuracy.append((100 * correct / len(batcher_train.dataset)))
+        train_fscore.append(f_scores/iterations)
+        # print(100.0 * correct / len(batcher_train.dataset))                                                   рень с перестановкой множителей местами!
 
-            ############################
-            # Validate - How did we do on the unseen dataset?
-            ############################
+        ############################
+        # Validate - How did we do on the unseen dataset?
+        ############################
 
-            loss = 0.0
-            correct = 0
-            iterations = 0
+
+        loss = 0.0
+        correct = 0
+        iterations = 0
+        f_scores = 0
 
         net.eval()  # Put the network into evaluate mode
 
@@ -151,18 +161,25 @@ if __name__ == "__main__":
 
             outputs = net(items)  # Do the forward pass
             loss += criterion(outputs, classes.long()).item()  # Calculate the loss
-
+                                                                            # loss = criterion(outputs, classes.long()).sum()
             # Record the correct predictions for training data
             _, predicted = torch.max(outputs.data, 1)
             correct += (predicted == classes.data.long()).sum()
+
+            f_scores += f1_score(predicted.cpu().numpy(), classes.data.cpu().numpy(), average='macro')
 
             iterations += 1
 
         # Record the validation loss
         valid_loss.append(loss / iterations)
         # Record the validation accuracy
-        valid_accuracy.append(correct / len(batcher_val.dataset) * 100.0)
+        valid_accuracy.append(100.0 * correct / float(len(batcher_val.dataset)))
+        valid_fscore.append(f_scores/iterations)
 
-        print('Epoch %d/%d, Tr Loss: %.4f, Tr Acc: %.4f, Val Loss: %.4f, Val Acc: %.4f'
-              % (epoch + 1, config.num_epochs, train_loss[-1], train_accuracy[-1],
-                 valid_loss[-1], valid_accuracy[-1]))
+        # print(correct, float(len(batcher_val.dataset)))
+        # print(100 * correct / float(len(batcher_val.dataset)))
+
+
+        print('Epoch %d/%d, Tr Loss: %.4f, Tr Fscore: %.4f, Val Loss: %.4f, Val Fscore: %.4f'
+              % (epoch + 1, config.num_epochs, train_loss[-1], train_fscore[-1],
+                 valid_loss[-1], valid_fscore[-1]))
