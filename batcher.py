@@ -32,8 +32,11 @@ class DummyBatcher(Sequence):
             res_x = []
             for i in indexes_tmp:
                 res_x.append(self.x[i])
+<<<<<<< HEAD
                 # код для тестовой выборки ссылается на не существующие функции
                 # for j in range(self.repeat_test):
                 #     res_x.append(self.prepare_feature(self.x[i]))
+=======
+>>>>>>> master
             res_x = np.asarray(res_x)[:, :, np.newaxis]
             return res_x

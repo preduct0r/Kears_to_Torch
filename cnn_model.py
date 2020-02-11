@@ -93,13 +93,6 @@ def get_oleg_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8), gpu_lstm
     # model
     acoustic_model = Sequential()
 
-    # conv
-    # p_size = [3, 3, 3, 3]
-    # p_size = [2, 2, 2, 2]
-
-    # k_size = [64, 32, 16, 8]
-    # k_size = [16, 16, 8, 4]
-
     acoustic_model.add(Conv1D(input_shape=config.shape, filters=8, kernel_size=k_size[0], activation=None, strides=1))
     acoustic_model.add(BatchNormalization())
     acoustic_model.add(Activation('relu', name='act1'))
