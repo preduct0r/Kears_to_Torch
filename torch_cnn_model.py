@@ -39,7 +39,7 @@ class torch_model(nn.Module):
         self.mp4 = nn.MaxPool1d(kernel_size=p_size[3])                                                              # 64*64*191
 
 
-        self.lstm = nn.LSTM(191, 128, bias=True)                                                                    # 64*64*128
+        self.lstm = nn.LSTM(22, 22, bias=True)          # 191*128                                                   # 64*64*128
         self.gap = nn.AdaptiveAvgPool1d(output_size = 1)                                                            # 64*64*1
         self.linear = nn.Linear(64, self.config.n_classes)                                                         #
 
