@@ -4,13 +4,12 @@ import pickle
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler)
+from keras.callbacks import (EarlyStopping, ModelCheckpoint, LearningRateScheduler)
 from keras.utils import Sequence, to_categorical
 from librosa.core import load
 
-from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d, get_seresnet18_model
-from trainutils import f1
-from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
+from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d
+from sklearn.metrics import f1_score, accuracy_score, confusion_matrix, recall_score
 
 # Batcher ==============================================================================================================
 # ======================================================================================================================
@@ -379,7 +378,7 @@ for feature_shape, to_expand in gen_giper_params():
 # ======================================================================================================================
 # ======================================================================================================================
 os.chdir(r'C:\Projects\EventDetectionSDK\python\experiments\fsin')
-from trainutils import plot_confusion_matrix, f1, plot_and_calc_roc_auc
+from keras.trainutils import plot_and_calc_roc_auc
 
 y_test_one_hot = to_categorical(y_test_num)
 

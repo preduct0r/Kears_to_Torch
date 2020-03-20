@@ -1,6 +1,5 @@
 import warnings
 warnings.simplefilter(action='ignore')
-
 import os
 import pickle
 import h5py
@@ -9,119 +8,85 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
 import torch
-from torchsummary import summary
-from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import torch.cuda as cuda
+import matplotlib
+from matplotlib import pyplot as plt
+import time
 
-from torch_batcher import My_Dataset
 from prepare_datasets import rectify_data
-from torch_cnn_model import  Config, torch_model
+from torch_cnn_model import  Config, torch_model, EarlyStopping, My_Dataset, Batcher
+from prepare_datasets import get_iemocap_raw
+from sampler import BalancedBatchSampler
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
+from balance import balance_classes
 
 
 
 if __name__ == "__main__":
-# загрузка посчитанных данных
-    base_path = r'C:\Users\kotov-d\Documents\BASES\IEMOCAP\iemocap'
-    train_meta_path = os.path.join(base_path, 'meta_train.csv')
-    test_meta_path = os.path.join(base_path, 'meta_test.csv')
+    [x_train, x_val, x_test, y_train, y_val, y_test] = get_iemocap_raw()
+    # x_train, y_train = balance_classes(x_train, y_train)
 
-    # # подсчитать test и train выборки
-    # test = rectify_data(base_path, test_meta_path)
-    # train = rectify_data(base_path, train_meta_path)
+    print(np.unique(y_train,return_counts=True))
 
-    # загрузить уже подсчитанные test и train выборки
-    hf_train= h5py.File(r'C:\Users\kotov-d\Documents\TASKS\ulma\x_train.h5', 'r')
-    train = hf_train.get('x_train').value
-    hf_train.close()
-
-    hf_test = h5py.File(r'C:\Users\kotov-d\Documents\TASKS\ulma\x_test.h5', 'r')
-    test = hf_test.get('x_test').value
-    hf_test.close()
-
-
-
-
-    batch_size = 64
-    cur_feature_dimension = 1
-    feat_t = False
-    show_train_info = 1
-
-
-
-    config = Config(shape=(16000, 1), lr=0.001, num_epochs=100, n_classes=3)
+    config = Config(lr=0.0001, batch_size=512, num_epochs=300, n_classes=4)
     net = torch_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8))
-    # print(summary(net, torch.cuda.FloatTensor(1,16000)))
-    # input()
 
+    if cuda.is_available():
+        device = 'cuda'
+    else:
+        device = 'cpu'
 
-    (N,W) = train.shape
+# ======================================================================================
+    counts_classes = list(np.unique(y_train, return_counts=True)[1])
+    sum_classes = np.sum(counts_classes)
+    weights_train = torch.DoubleTensor([((sum_classes)-x)/sum_classes for x in counts_classes])
 
-    np.random.shuffle(train)
+    # sampler = torch.utils.data.sampler.WeightedRandomSampler([0.25,0.25,0.25,0.25], config.batch_size, replacement=True)
 
-    x_train = train[:int(0.8*N), :16000]
-    y_train = train[:int(0.8*N), -1]
-    x_val = train[int(0.8*N):, :16000]
-    y_val = train[int(0.8*N):, -1]
-    x_test = test[:, :16000]
-    y_test = test[:, -1]
-    print('np.unique(y_train) ', np.unique(y_train, return_counts=True))
-    print('np.unique(y_test) ', np.unique(y_test, return_counts=True))
+    sampler2 = BalancedBatchSampler(My_Dataset(x_train, y_train), y_train)
+# ======================================================================================
+    print(x_train.shape, y_train.shape)
+    zzz = np.unique(y_train,return_counts=True)
 
-    print('================================================\n\nStart learning')
-
-    batcher_train = DataLoader(My_Dataset(x_train, y_train), batch_size=batch_size, shuffle=True)
-    batcher_val = DataLoader(My_Dataset(x_val, y_val), batch_size=batch_size, shuffle=True)
-
-    # history = model.fit_generator(batcher_train, validation_data=batcher_val, epochs=config.num_epochs,
-    #                               use_multiprocessing=False, verbose=show_train_info)
+    batcher_train = DataLoader(My_Dataset(x_train, y_train), batch_size=config.batch_size)
+    # batcher_train = Batcher(x_train, y_train, batch_size=config.batch_size)
+    batcher_val = DataLoader(My_Dataset(x_test, y_test), batch_size=config.batch_size,
+                               )
+    start_time = time.time()
 
     train_loss = []
     valid_loss = []
-    train_accuracy = []
-    valid_accuracy = []
     train_fscore = []
     valid_fscore = []
 
-    if cuda.is_available():
-        net = net.cuda()
-
-    # Our loss function
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(net.parameters(), lr=config.lr, momentum=0.9)
+    optimizer = torch.optim.Adam(net.parameters(), lr=config.lr)
+    net.to(device)
+    early_stopping = EarlyStopping()
+    min_loss = 1000
 
     for epoch in range(config.num_epochs):
-
-        ############################
-        # Train
-        ############################
-
         iter_loss = 0.0
         correct = 0
-        iterations = 0
         f_scores= 0
+        iterations = 0
 
-        net.train()  # Put the network into training mode
+        net.train()
 
         for i, (items, classes) in enumerate(batcher_train):
+        # for i in range(x_train.shape[0]//config.batch_size):
+            # items,classes = batcher_train.get()
 
-            # Convert torch tensor to Variable
-            items = Variable(items)
-            classes = Variable(classes)
+            items = items.to(device)
+            classes = classes.to(device)
+            optimizer.zero_grad()
+            outputs = net(items)
+            loss = criterion(outputs, classes.long())
+            iter_loss += loss.item()
+            loss.backward()
+            optimizer.step()
 
-            # If we have GPU, shift the data to GPU
-            if cuda.is_available():
-                items = items.cuda()
-                classes = classes.cuda()
-
-            optimizer.zero_grad()  # Clear off the gradients from any past operation
-            outputs = net(items)  # Do the forward pass
-            loss = criterion(outputs, classes.long())                                               # Calculate the loss
-            iter_loss += loss.item()  # Accumulate the loss
-            loss.backward()  # Calculate the gradients with help of back propagation
-            optimizer.step()  # Ask the optimizer to adjust the parameters based on the gradients
-
-            # Record the correct predictions for training data
             _, predicted = torch.max(outputs.data, 1)
             correct += (predicted == classes.data.long()).sum()
 
@@ -129,18 +94,18 @@ if __name__ == "__main__":
 
             iterations += 1
 
-        # Record the training loss
+            torch.cuda.empty_cache()
+
         train_loss.append(iter_loss / iterations)
-        # Record the training accuracy
-        train_accuracy.append((100 * correct / len(batcher_train.dataset)))
-        train_fscore.append(f_scores/iterations)
-        # print(100.0 * correct / len(batcher_train.dataset))                                                   рень с перестановкой множителей местами!
+        train_fscore.append(f_scores / iterations)
+
+        early_stopping.update_loss(train_loss[-1])
+        if early_stopping.stop_training():
+            break
 
         ############################
-        # Validate - How did we do on the unseen dataset?
+        # Validate
         ############################
-
-
         loss = 0.0
         correct = 0
         iterations = 0
@@ -150,19 +115,12 @@ if __name__ == "__main__":
 
         for i, (items, classes) in enumerate(batcher_val):
 
-            # Convert torch tensor to Variable
-            items = Variable(items)
-            classes = Variable(classes)
+            items = Variable(items).to(device)
+            classes = Variable(classes).to(device)
 
-            # If we have GPU, shift the data to GPU
-            if cuda.is_available():
-                items = items.cuda()
-                classes = classes.cuda()
+            outputs = net(items)
+            loss += criterion(outputs, classes.long()).item()
 
-            outputs = net(items)  # Do the forward pass
-            loss += criterion(outputs, classes.long()).item()  # Calculate the loss
-                                                                            # loss = criterion(outputs, classes.long()).sum()
-            # Record the correct predictions for training data
             _, predicted = torch.max(outputs.data, 1)
             correct += (predicted == classes.data.long()).sum()
 
@@ -170,16 +128,20 @@ if __name__ == "__main__":
 
             iterations += 1
 
-        # Record the validation loss
         valid_loss.append(loss / iterations)
-        # Record the validation accuracy
-        valid_accuracy.append(100.0 * correct / float(len(batcher_val.dataset)))
         valid_fscore.append(f_scores/iterations)
 
-        # print(correct, float(len(batcher_val.dataset)))
-        # print(100 * correct / float(len(batcher_val.dataset)))
-
+        if valid_loss[-1] < min_loss:
+            torch.save(net, r"C:\Users\kotov-d\Documents\TASKS\keras_to_torch\net_unbalanced_4cls.pb")
+            min_loss = valid_loss[-1]
 
         print('Epoch %d/%d, Tr Loss: %.4f, Tr Fscore: %.4f, Val Loss: %.4f, Val Fscore: %.4f'
               % (epoch + 1, config.num_epochs, train_loss[-1], train_fscore[-1],
                  valid_loss[-1], valid_fscore[-1]))
+
+    with open(os.path.join(r"C:\Users\kotov-d\Documents\TASKS\keras_to_torch","loss_track_4cls.pkl"), 'wb') as f:
+        pickle.dump([train_loss, train_fscore, valid_loss, valid_fscore], f)
+
+    print(time.time()-start_time)
+
+

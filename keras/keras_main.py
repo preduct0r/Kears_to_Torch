@@ -5,15 +5,12 @@ import os
 import pickle
 
 import numpy as np
-import pandas as pd
-from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, LearningRateScheduler)
-from sklearn.metrics import f1_score, accuracy_score, classification_report, confusion_matrix, recall_score
+from keras.callbacks import (EarlyStopping)
+from sklearn.metrics import f1_score, accuracy_score, confusion_matrix, recall_score
 import h5py
 
-from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d, get_seresnet18_model
-from batcher import DummyBatcher
-from prepare_datasets import get_data, rectify_data
-import sys
+from cnn_model import  Config, get_oleg_model
+from keras.batcher import DummyBatcher
 import tensorflow as tf
 
 
@@ -55,7 +52,6 @@ if __name__ == "__main__":
     print(model.summary())
     input()
 
-    (N,W) = train.shape
 
     np.random.shuffle(train)
 
