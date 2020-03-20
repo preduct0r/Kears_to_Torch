@@ -8,7 +8,7 @@ import h5py
 from sklearn.model_selection import train_test_split
 
 
-def rectify_data(base_dir, meta_path):
+def rectify_data(base_dir, meta_path, n_classes, experiments_path):
     meta_data = pd.read_csv(meta_path, delimiter=';')
     meta_data = meta_data[meta_data.cur_label!='disgust'][meta_data.cur_label!='excitement'][meta_data.cur_label!='fear'][meta_data.cur_label!='frustration'] \
             [meta_data.cur_label != 'oth'][meta_data.cur_label != 'surprise'][meta_data.cur_label != 'xxx']#[meta_data.cur_label != 'neutrality']
@@ -36,9 +36,6 @@ def rectify_data(base_dir, meta_path):
             rect_x.append(tuple(element))
             rect_y.append(y)
 
-        if idx%50==0 and idx!=0:
-            print(idx)
-
     # вспомогательная функция, чтобы привести лист листов к матричному виду
     def make_array(x):
         new_x = [np.array(c) for c in x]
@@ -50,52 +47,46 @@ def rectify_data(base_dir, meta_path):
 
     # переводим категориальные призаки к вещественным, чтобы было возможно производить расчеты,
     # а для обратного обращения создаем словарь
-    dict_emo, reverse_dict_emo, mark = {}, {}, True
-    if mark==True:
-        for idx,i in enumerate(np.unique(rect_y)):
-            dict_emo[i] = idx
-            reverse_dict_emo[idx] = i
-            mark=False
-        with open(r'C:\Users\kotov-d\Documents\TASKS\task#7\dictionaries.pkl', 'wb') as f:
-            pickle.dump([dict_emo, reverse_dict_emo], f, protocol=2)
-    else:
-        with open(r'C:\Users\kotov-d\Documents\TASKS\task#7\dictionaries.pkl', 'rb') as f:
-            [dict_emo, reverse_dict_emo] = pickle.load(f)
+    dict_emo, reverse_dict_emo = {}, {}
+
+    for idx,i in enumerate(np.unique(rect_y)):
+        dict_emo[i] = idx
+        reverse_dict_emo[idx] = i
 
     rect_y = [dict_emo[i] for i in rect_y]
     rect_y = np.array(rect_y).reshape(-1,1)
 
     rect_data = np.hstack((final_x, rect_y))
 
-
-
     # сохраняем эти матрицы
     if ntpath.basename(str(meta_path))=='meta_train.csv':
-        h5f = h5py.File(r'C:\Users\kotov-d\Documents\TASKS\keras_to_torch\x_train_4cls.h5', 'w')
+        h5f = h5py.File(os.path.join(experiments_path, 'x_train_{}cls.h5'.format(n_classes)), 'w')
         h5f.create_dataset('x_train', data=rect_data)
         h5f.close()
+        print('train part is created')
     else:
-        h5f = h5py.File(r'C:\Users\kotov-d\Documents\TASKS\keras_to_torch\x_test_4cls.h5', 'w')
-        h5f.create_dataset('x_test', data=rect_data, dtype=np.float16)
+        h5f = h5py.File(os.path.join(experiments_path, 'x_test_{}cls.h5'.format(n_classes)), 'w')
+        h5f.create_dataset('x_test', data=rect_data)
         h5f.close()
+        print('test part is created')
 
 
-def get_iemocap_raw():
+
+def get_raw_data(base_path, experiments_path, n_classes):
     # загрузка посчитанных данных
-    base_path = r'C:\Users\kotov-d\Documents\BASES\iemocap_last'
     train_meta_path = os.path.join(base_path, 'meta_train.csv')
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
     # подсчитать test и train выборки
-    test = rectify_data(base_path, test_meta_path)
-    train = rectify_data(base_path, train_meta_path)
+    test = rectify_data(base_path, test_meta_path, n_classes, experiments_path=experiments_path)
+    train = rectify_data(base_path, train_meta_path, n_classes, experiments_path=experiments_path)
 
     # загрузить уже подсчитанные test и train выборки
-    hf_train = h5py.File(r'C:\Users\kotov-d\Documents\TASKS\keras_to_torch\x_train_4cls.h5', 'r')
+    hf_train = h5py.File(os.path.join(experiments_path, 'x_train_{}cls.h5'.format(n_classes)), 'r')
     train = hf_train.get('x_train').value
     hf_train.close()
 
-    hf_test = h5py.File(r'C:\Users\kotov-d\Documents\TASKS\keras_to_torch\x_test_4cls.h5', 'r')
+    hf_test = h5py.File(os.path.join(experiments_path, 'x_test_{}cls.h5'.format(n_classes)), 'r')
     test = hf_test.get('x_test').value
     hf_test.close()
 
