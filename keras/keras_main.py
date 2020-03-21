@@ -9,7 +9,7 @@ from keras.callbacks import (EarlyStopping)
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix, recall_score
 import h5py
 
-from cnn_model import  Config, get_oleg_model
+from keras.cnn_model import  Config, get_oleg_model
 from keras.batcher import DummyBatcher
 import tensorflow as tf
 

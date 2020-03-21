@@ -65,6 +65,17 @@ class BalancedBatchSampler(Sampler):
         return self.balanced_max * len(self.keys)
 
 
+# # ======================================================================================
+#     counts_classes = list(np.unique(y_train, return_counts=True)[1])
+#     sum_classes = np.sum(counts_classes)
+#     weights_train = torch.DoubleTensor([((sum_classes)-x)/sum_classes for x in counts_classes])
+#
+#     # sampler = torch.utils.data.sampler.WeightedRandomSampler([0.25,0.25,0.25,0.25], config.batch_size, replacement=True)
+#     sampler2 = BalancedBatchSampler(My_Dataset(x_train, y_train), y_train)
+# # ======================================================================================
+
+
+
 
 # class WeightedSampler(Sampler):
 #     def make_weights_for_balanced_classes(images, nclasses):

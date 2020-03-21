@@ -8,7 +8,7 @@ from keras.callbacks import (EarlyStopping, ModelCheckpoint, LearningRateSchedul
 from keras.utils import Sequence, to_categorical
 from librosa.core import load
 
-from cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d
+from keras.cnn_model import  Config, linear_decay_lr, get_oleg_model, get_oleg_model_2d
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix, recall_score
 
 # Batcher ==============================================================================================================

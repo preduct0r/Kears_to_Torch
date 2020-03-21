@@ -8,10 +8,11 @@ import h5py
 from sklearn.model_selection import train_test_split
 
 
-def rectify_data(base_dir, meta_path, n_classes, experiments_path):
+def rectify_data(base_dir, meta_path, n_classes, size, experiments_path):
     meta_data = pd.read_csv(meta_path, delimiter=';')
     meta_data = meta_data[meta_data.cur_label!='disgust'][meta_data.cur_label!='excitement'][meta_data.cur_label!='fear'][meta_data.cur_label!='frustration'] \
             [meta_data.cur_label != 'oth'][meta_data.cur_label != 'surprise'][meta_data.cur_label != 'xxx']#[meta_data.cur_label != 'neutrality']
+
     rect_x, rect_y, ground_truth_sr = [], [], 8000
 
     # проходимся по каждому файлу и нарезаем его на куски по 16000 отчетов
@@ -19,20 +20,20 @@ def rectify_data(base_dir, meta_path, n_classes, experiments_path):
         x, sr = librosa.core.load(os.path.join(base_dir, 'data', row[0]), sr=None, mono=False, res_type='kaiser_best', dtype=np.float32)
 
         # проверка на соответствие sample_rate правильному значению
-        assert sr == ground_truth_sr, 'What the hell is going on with sample rate of your files?'
+        # assert sr == ground_truth_sr, 'What the hell is going on with sample rate of your files?'
 
         x = list(x)
         y = row[1]
 
         # добавляем куски по 16000 с нахлестом 8000
         k1=0
-        for k in range(0, len(x)-16000, 8000):
-            rect_x.append(tuple(x[k:k+16000]))
+        for k in range(0, len(x)-size, size//2):
+            rect_x.append(tuple(x[k:k+size]))
             rect_y.append(y)
             k1=k
-        for k2 in range(k1+8000, len(x), 8000):
+        for k2 in range(k1+size//2, len(x), size//2):
             element = x[k2:]
-            element = np.pad(element, (0, 16000 - len(element)), mode='constant')
+            element = np.pad(element, (0, size - len(element)), mode='constant')
             rect_x.append(tuple(element))
             rect_y.append(y)
 
@@ -72,14 +73,15 @@ def rectify_data(base_dir, meta_path, n_classes, experiments_path):
 
 
 
-def get_raw_data(base_path, experiments_path, n_classes):
+def get_raw_data(base_path, experiments_path, n_classes, size=16000):
     # загрузка посчитанных данных
     train_meta_path = os.path.join(base_path, 'meta_train.csv')
     test_meta_path = os.path.join(base_path, 'meta_test.csv')
 
     # подсчитать test и train выборки
-    test = rectify_data(base_path, test_meta_path, n_classes, experiments_path=experiments_path)
-    train = rectify_data(base_path, train_meta_path, n_classes, experiments_path=experiments_path)
+    if os.path.isfile(os.path.join(experiments_path, 'x_test_{}cls.h5'.format(n_classes)))==False:
+        test = rectify_data(base_path, test_meta_path, n_classes, size, experiments_path=experiments_path)
+        train = rectify_data(base_path, train_meta_path, n_classes, size, experiments_path=experiments_path)
 
     # загрузить уже подсчитанные test и train выборки
     hf_train = h5py.File(os.path.join(experiments_path, 'x_train_{}cls.h5'.format(n_classes)), 'r')
@@ -92,16 +94,16 @@ def get_raw_data(base_path, experiments_path, n_classes):
 
     (N,W) = train.shape
 
-    x_train = train[:int(0.8*N), :16000]
-    y_train = train[:int(0.8*N), -1]
-    x_val = train[int(0.8*N):, :16000]
-    y_val = train[int(0.8*N):, -1]
+    # x_train = train[:int(0.8*N), :16000]
+    # y_train = train[:int(0.8*N), -1]
+    # x_val = train[int(0.8*N):, :16000]
+    # y_val = train[int(0.8*N):, -1]
 
-    x_test = test[:, :16000]
+    x_test = test[:, :size]
     y_test = test[:, -1]
     # x_train = train[:, :16000]
     # y_train = train[:, -1]
-    # x_val, x_test, y_val, y_test = train_test_split(test[:,:16000], test[:,-1], test_size = 0.33, random_state = 42)
+    x_train, x_val, y_train, y_val = train_test_split(train[:,:size], train[:,-1], test_size = 0.2, random_state = 42)
     print('np.unique(y_train) ', np.unique(y_train, return_counts=True))
     print('np.unique(y_val) ', np.unique(y_val, return_counts=True))
     print('np.unique(y_test) ', np.unique(y_test, return_counts=True))
