@@ -54,7 +54,7 @@ class Batcher:
 
 
 class EarlyStopping():
-    def __init__(self, patience=5, min_percent_gain=1):
+    def __init__(self, patience=5, min_percent_gain=0.1):
         self.patience = patience
         self.loss_list = []
         self.min_percent_gain = min_percent_gain / 100.
@@ -79,35 +79,37 @@ class torch_model(nn.Module):
     def __init__(self, config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8)):
         super(torch_model, self).__init__()
         self.config = config
-        self.fc1 = nn.Conv1d(in_channels= 1, out_channels=8, kernel_size=k_size[0], stride=1)
+        self.fc1 = nn.Conv1d(in_channels= 1, out_channels=8, kernel_size=k_size[0])      #(batch_size, in_channels, seq_len)
         self.bn_1 = nn.BatchNorm1d(8)
         self.relu1 = nn.ReLU()
         self.mp1 = nn.MaxPool1d(kernel_size=p_size[0])
 
-        self.fc2 = nn.Conv1d(in_channels=8, out_channels=16, kernel_size=k_size[1], stride=1)
+        self.fc2 = nn.Conv1d(in_channels=8, out_channels=16, kernel_size=k_size[1])
         self.bn_2 = nn.BatchNorm1d(16)
         self.relu2 = nn.ReLU()
         self.mp2 = nn.MaxPool1d(kernel_size=p_size[1])
 
-        self.fc3 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=k_size[2], stride=1)
+        self.fc3 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=k_size[2])
         self.bn_3 = nn.BatchNorm1d(32)
         self.relu3 = nn.ReLU()
         self.mp3 = nn.MaxPool1d(kernel_size=p_size[2])
 
-        self.fc4 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=k_size[3], stride=1)
+        self.fc4 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=k_size[3])
         self.bn_4 = nn.BatchNorm1d(64)
         self.relu4 = nn.ReLU()
-        self.mp4 = nn.MaxPool1d(kernel_size=p_size[3])
+        self.mp4 = nn.MaxPool1d(kernel_size=p_size[3])                           #(batch_size, in_channels, seq_len)
 
 
-        self.lstm1 = nn.LSTM(64, 128, bias=True)
-        self.lstm2 = nn.LSTM(128, 128, bias=True)
+        self.lstm1 = nn.LSTM(64, 128, batch_first=True)
+        self.lstm2 = nn.LSTM(128, 128, batch_first=True)
 
         self.gap = nn.AdaptiveAvgPool1d(output_size = 1)
+        self.dropout = nn.Dropout(p=0.9)
         self.linear = nn.Linear(128, self.config.n_classes)
+        self.bn_final = nn.BatchNorm1d(self.config.n_classes)
 
 
-    def forward(self, x):
+    def forward(self, x, hidden):
         out = self.fc1(x)
         out = self.bn_1(out)
         out = self.relu1(out)
@@ -129,11 +131,23 @@ class torch_model(nn.Module):
         out = self.mp4(out)
         out = out.permute(0,2,1)
 
-        out = self.lstm1(out)[0]
-        out = self.lstm2(out)[0]
+        out, hidden = self.lstm1(out, hidden)
+        out, hidden = self.lstm2(out, hidden)
 
         out = out.permute(0, 2, 1)
         out = self.gap(out).squeeze()
-        out = F.dropout(out, p=0.1)
+        out = self.dropout(out)
         out = self.linear(out)
-        return out
+        out = self.bn_final(out)
+        return out, hidden
+
+
+    def init_hidden(self, batch_size):
+        ''' Initializes hidden state '''
+        # Create two new tensors with sizes n_layers x batch_size x n_hidden,
+        # initialized to zero, for hidden state and cell state of LSTM
+        # weight = next(self.parameters()).data
+        hidden = (torch.zeros((1, batch_size, 128)).to('cuda'),
+                      torch.zeros((1, batch_size, 128)).zero_().to('cuda'))
+
+        return hidden
