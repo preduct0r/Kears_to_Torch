@@ -22,11 +22,10 @@ def train_net(base_path, size=32000, n_classes=4):
     Path(experiments_path).mkdir(parents=True, exist_ok=True)
 
     [x_train, x_val, x_test, y_train, y_val, y_test] = get_raw_data(base_path, experiments_path, n_classes, size=16000)
-    # x_train, y_train = balance_classes(x_train, y_train)
-    x_train = np.vstack((x_train, x_val))
-    y_train = np.hstack((y_train, y_val))
+    # x_train = np.vstack((x_train, x_val))
+    # y_train = np.hstack((y_train, y_val))
 
-    config = Config(lr=0.00001, batch_size=128, num_epochs=170, n_classes=n_classes)
+    config = Config(lr=0.00001, batch_size=128, num_epochs=1000, n_classes=n_classes)
     net = torch_model(config, p_size=(3, 3, 3, 3), k_size=(64, 32, 16, 8))
 
     if cuda.is_available():
@@ -62,8 +61,6 @@ def train_net(base_path, size=32000, n_classes=4):
         h = net.init_hidden(config.batch_size)
 
         for i, (items, classes) in enumerate(batcher_train):
-        # for i in range(x_train.shape[0]//config.batch_size):
-            # items,classes = batcher_train.get()
             if classes.shape[0] != config.batch_size:
                 break
 
@@ -98,59 +95,57 @@ def train_net(base_path, size=32000, n_classes=4):
         ############################
         # Validate
         ############################
-    #     iter_loss = 0.0
-    #     correct = 0
-    #     f_scores = 0
-    #     iterations = 0
-    #
-    #     net.eval()  # Put the network into evaluate mode
-    #     val_h = net.init_hidden(config.batch_size)
-    #
-    #     for i, (items, classes) in enumerate(batcher_val):
-    #         if classes.shape[0] != config.batch_size:
-    #             break
-    #
-    #         items = items.to(device)
-    #         classes = classes.to(device)
-    #
-    #
-    #         val_h = tuple([each.data for each in val_h])
-    #         outputs, val_h = net(items, val_h)
-    #         loss = criterion(outputs, classes.long())
-    #         iter_loss += loss.item()
-    #
-    #         _, predicted = torch.max(outputs.data, 1)
-    #         correct += (predicted == classes.data.long()).sum()
-    #
-    #         f_scores += f1_score(predicted.cpu().numpy(), classes.data.cpu().numpy(), average='macro')
-    #
-    #         iterations += 1
-    #
-    #     valid_loss.append(iter_loss / iterations)
-    #     valid_fscore.append(f_scores / iterations)
-    #
-    #     if valid_loss[-1] < min_loss:
-    #         torch.save(net, os.path.join(experiments_path, "net_unbalanced_{}cls.pb".format(n_classes)))
-    #         min_loss = valid_loss[-1]
-    #
-        # print('Epoch %d/%d, Tr Loss: %.4f, Tr Fscore: %.4f, Val Loss: %.4f, Val Fscore: %.4f'
-        #       % (epoch + 1, config.num_epochs, train_loss[-1], train_fscore[-1],
-        #          valid_loss[-1], valid_fscore[-1]))
-    #
-    # with open(os.path.join(experiments_path,"loss_track_{}cls.pkl".format(n_classes)), 'wb') as f:
-    #     pickle.dump([train_loss, train_fscore, valid_loss, valid_fscore], f)
+        iter_loss = 0.0
+        correct = 0
+        f_scores = 0
+        iterations = 0
 
-        print('Epoch %d/%d, Tr Loss: %.4f, Tr Fscore: %.4f'
-              % (epoch + 1, config.num_epochs, train_loss[-1], train_fscore[-1]))
+        net.eval()  # Put the network into evaluate mode
+        val_h = net.init_hidden(config.batch_size)
 
-    torch.save(net, os.path.join(experiments_path, "net.pb"))
+        for i, (items, classes) in enumerate(batcher_val):
+            if classes.shape[0] != config.batch_size:
+                break
+
+            items = items.to(device)
+            classes = classes.to(device)
+
+
+            val_h = tuple([each.data for each in val_h])
+            outputs, val_h = net(items, val_h)
+            loss = criterion(outputs, classes.long())
+            iter_loss += loss.item()
+
+            _, predicted = torch.max(outputs.data, 1)
+            correct += (predicted == classes.data.long()).sum()
+
+            f_scores += f1_score(predicted.cpu().numpy(), classes.data.cpu().numpy(), average='macro')
+
+            iterations += 1
+
+        valid_loss.append(iter_loss / iterations)
+        valid_fscore.append(f_scores / iterations)
+
+        if valid_loss[-1] < min_loss:
+            torch.save(net, os.path.join(experiments_path, "net.pb".format(n_classes)))
+            min_loss = valid_loss[-1]
+
+
+
+        print('Epoch %d/%d, Tr Loss: %.4f, Tr Fscore: %.4f, Val Loss: %.4f, Val Fscore: %.4f'
+              % (epoch + 1, config.num_epochs, train_loss[-1], train_fscore[-1],
+                 valid_loss[-1], valid_fscore[-1]))
+
+        with open(os.path.join(experiments_path, "loss_track.pkl"), 'wb') as f:
+            pickle.dump([train_loss, train_fscore, valid_loss, valid_fscore], f)
+
 
     print(time.time()-start_time)
 
 
 
-# train_net(r'C:\Users\kotov-d\Documents\BASES\friends')
-train_net(r'C:\Users\kotov-d\Documents\BASES\iemocap_last')
+train_net(r'C:\Users\kotov-d\Documents\BASES\friends')
+# train_net(r'C:\Users\kotov-d\Documents\BASES\iemocap_last')
 # train_net(r'C:\Users\kotov-d\Documents\BASES\RAMAS\ramas')
 # train_net(r'C:\Users\kotov-d\Documents\BASES\telecom_vad')
 

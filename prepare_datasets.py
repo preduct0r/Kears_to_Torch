@@ -104,9 +104,9 @@ def get_raw_data(base_path, experiments_path, n_classes, size=16000):
     # x_train = train[:, :16000]
     # y_train = train[:, -1]
     x_train, x_val, y_train, y_val = train_test_split(train[:,:size], train[:,-1], test_size = 0.2, random_state = 42)
-    print('np.unique(y_train) ', np.unique(y_train, return_counts=True))
-    print('np.unique(y_val) ', np.unique(y_val, return_counts=True))
-    print('np.unique(y_test) ', np.unique(y_test, return_counts=True))
+    # print('np.unique(y_train) ', np.unique(y_train, return_counts=True))
+    # print('np.unique(y_val) ', np.unique(y_val, return_counts=True))
+    # print('np.unique(y_test) ', np.unique(y_test, return_counts=True))
 
     return [x_train, x_val, x_test, y_train, y_val, y_test]
 
